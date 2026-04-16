@@ -1,104 +1,79 @@
 import streamlit as st
 from streamlit_drawable_canvas import st_canvas
-import random
-import pandas as pd
 
-# Configuración estética de la página
-st.set_page_config(page_title="Pop-Art Studio Pro", page_icon="🎨", layout="wide")
+# Configuración de la página para un look más profesional
+st.set_page_config(page_title="Magic Canvas", layout="wide")
 
-# Estilo personalizado para botones y contenedores
+st.title("🎨 Magic Canvas Pro")
+st.markdown("---")
+
+# Estilos CSS personalizados para mejorar el diseño de los botones y radio
 st.markdown("""
     <style>
-    .main { background-color: #f0f2f6; }
-    .stButton>button { width: 100%; border-radius: 10px; height: 3em; font-weight: bold; }
-    .stDownloadButton>button { background-color: #00ff00; color: black; }
-    .stDownloadButton>button:hover { background-color: #00cc00; color: white; }
+    .stButton>button { width: 100%; border-radius: 20px; }
+    .stColorPicker { border-radius: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
-## --- LÓGICA DE LA FUNCIÓN DIVERTIDA ---
-if 'party_mode' not in st.session_state:
-    st.session_state.party_mode = False
-
-def toggle_party():
-    st.session_state.party_mode = not st.session_state.party_mode
-
-## --- SIDEBAR: PANEL DE CONTROL ---
 with st.sidebar:
-    st.title("🎨 Pop-Art Studio")
-    st.info("Crea un poster moderno en segundos.")
+    st.header("🛠️ Herramientas")
     
-    with st.expander("📐 Ajustes del Lienzo", expanded=False):
-        c_width = st.slider("Ancho", 400, 1000, 700)
-        c_height = st.slider("Alto", 300, 800, 450)
-    
-    st.subheader("🖌️ Herramientas de Trazo")
-    mode = st.selectbox("Herramienta", ("freedraw", "line", "rect", "circle", "transform"))
-    thickness = st.slider("Grosor", 1, 50, 10)
-    
-    # Selector de colores con presets estéticos
-    st.write("*Color del Pincel*")
-    color_pals = ["#FF007F", "#7A00FF", "#00E5FF", "#FFD700", "#FFFFFF", "#000000"]
-    cols = st.columns(6)
-    selected_color = "#FF007F" # Default
-    
-    # Si el modo fiesta está activo, el color es aleatorio
-    if st.session_state.party_mode:
-        selected_color = random.choice(color_pals)
-        st.warning("🎉 ¡MODO FIESTA ACTIVO!")
-    else:
-        selected_color = st.color_picker("Color personalizado", "#FF007F", label_visibility="collapsed")
+    with st.expander("📐 Dimensiones", expanded=False):
+        canvas_width = st.slider("Ancho", 400, 1000, 800, 50)
+        canvas_height = st.slider("Alto", 300, 800, 500, 50)
 
-    st.write("*Color de Fondo*")
-    bg_color = st.color_picker("Fondo", "#121212", label_visibility="collapsed")
+    st.subheader("🖌️ Pincel")
+    drawing_mode = st.selectbox(
+        "Herramienta:",
+        ("freedraw", "line", "rect", "circle", "transform", "polygon", "point")
+    )
+    stroke_width = st.slider("Grosor del trazo", 1, 50, 5)
 
+    # --- Sección de Colores Mejorada ---
     st.markdown("---")
-    # BOTÓN DE FUNCIÓN DIVERTIDA
-    st.button("🔥 ACTIVAR MODO FIESTA", on_click=toggle_party)
+    
+    # Paletas de colores predefinidas
+    palette = ["#FF4B4B", "#FFA500", "#FFFF00", "#00FF00", "#00FFFF", "#0000FF", "#8B00FF", "#FFFFFF", "#000000"]
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.write("*Color Pincel*")
+        stroke_color = st.color_picker("Stroke", "#FFFFFF", label_visibility="collapsed")
+        # Botones rápidos para color de trazo
+        st.write("Presets:")
+        cp_cols = st.columns(3)
+        for i, color in enumerate(palette[:6]):
+            if cp_cols[i % 3].button(" ", key=f"p_{i}", help=color):
+                stroke_color = color
 
-## --- CUERPO PRINCIPAL ---
-col_canvas, col_tools = st.columns([3, 1])
+    with col2:
+        st.write("*Color Fondo*")
+        bg_color = st.color_picker("BG", "#1E1E1E", label_visibility="collapsed")
+        # Botones rápidos para color de fondo
+        st.write("Presets:")
+        bg_p_cols = st.columns(3)
+        bg_presets = ["#FFFFFF", "#1E1E1E", "#2D2D2D"]
+        for i, color in enumerate(bg_presets):
+            if bg_p_cols[i % 3].button(" ", key=f"bg_{i}", help=color):
+                bg_color = color
 
-with col_canvas:
-    # El lienzo
+# --- Área Principal ---
+c1, c2, c3 = st.columns([1, 4, 1])
+
+with c2:
+    # Contenedor para el canvas
     canvas_result = st_canvas(
         fill_color="rgba(255, 165, 0, 0.3)",
-        stroke_width=thickness,
-        stroke_color=selected_color,
+        stroke_width=stroke_width,
+        stroke_color=stroke_color,
         background_color=bg_color,
-        height=c_height,
-        width=c_width,
-        drawing_mode=mode,
-        key="canvas_main",
+        height=canvas_height,
+        width=canvas_width,
+        drawing_mode=drawing_mode,
+        key=f"canvas_{canvas_width}{canvas_height}{stroke_color}_{bg_color}", 
         update_streamlit=True,
     )
 
-with col_tools:
-    st.subheader("📦 Acciones")
-    
-    # 1. Botón de Limpiar (Refresca la página para borrar)
-    if st.button("🗑️ Borrar Todo"):
-        st.rerun()
-        
-    # 2. Funcionalidad de descarga
     if canvas_result.image_data is not None:
-        st.write("¿Te gusta tu diseño?")
-        # Convertimos la imagen para descarga (puedes guardarla como PNG)
-        st.download_button(
-            label="💾 Descargar Poster",
-            data=pd.DataFrame(canvas_result.image_data.reshape(-1, 4)).to_csv().encode('utf-8'),
-            file_name="mi_obra_popart.csv", # Nota: Para imagen real se usa PIL, esto es demostrativo funcional
-            mime="text/csv",
-        )
-    
-    st.markdown("---")
-    st.subheader("📊 Datos del Dibujo")
-    if canvas_result.json_data is not None:
-        objects = len(canvas_result.json_data["objects"])
-        st.metric("Formas creadas", objects)
-        if objects > 10:
-            st.success("¡Eres todo un Picasso!")
-
-# Pie de página
-st.markdown("---")
-st.caption("Desarrollado con ❤️ para artistas digitales rápidos.")
+        st.caption("Usa el botón secundario para guardar tu obra maestra.")
