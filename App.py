@@ -27,9 +27,10 @@ model = load_model()
 # =========================
 def predict_digit(image):
     image = ImageOps.grayscale(image)
+    image = ImageOps.invert(image)  # 🔥 CLAVE
     image = image.resize((28, 28))
 
-    img = np.array(image, dtype='float32') / 255.0
+    img = np.array(image) / 255.0
     img = img.reshape(1, 28, 28, 1)
 
     prediction = model.predict(img)
