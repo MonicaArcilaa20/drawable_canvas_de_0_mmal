@@ -1,0 +1,1 @@
+# drawable_canvas_de_0_mmal
