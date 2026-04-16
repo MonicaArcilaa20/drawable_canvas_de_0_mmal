@@ -1,79 +1,118 @@
 import streamlit as st
 from streamlit_drawable_canvas import st_canvas
+import time
+import random
 
-# Configuración de la página para un look más profesional
-st.set_page_config(page_title="Magic Canvas", layout="wide")
+# 1. Configuración de página con estilo Dark Mode elegante
+st.set_page_config(page_title="AI Vision Canvas", layout="wide", page_icon="👁️")
 
-st.title("🎨 Magic Canvas Pro")
-st.markdown("---")
-
-# Estilos CSS personalizados para mejorar el diseño de los botones y radio
 st.markdown("""
     <style>
-    .stButton>button { width: 100%; border-radius: 20px; }
-    .stColorPicker { border-radius: 10px; }
+    .main { background-color: #0e1117; }
+    .stButton>button { 
+        border-radius: 50px; 
+        border: 2px solid #4F8BF9;
+        transition: all 0.3s;
+    }
+    .stButton>button:hover { 
+        transform: scale(1.05);
+        background-color: #4F8BF9;
+        color: white;
+    }
+    .prediction-box {
+        padding: 20px;
+        border-radius: 15px;
+        background: #1e2130;
+        border-left: 5px solid #00ffcc;
+        margin: 10px 0;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-with st.sidebar:
-    st.header("🛠️ Herramientas")
+# --- LÓGICA DE PREDICCIÓN (La función divertida) ---
+def predict_drawing(json_data):
+    if json_data is None or len(json_data["objects"]) == 0:
+        return "Un lienzo vacío... ¡Qué minimalista!", "😶"
     
-    with st.expander("📐 Dimensiones", expanded=False):
-        canvas_width = st.slider("Ancho", 400, 1000, 800, 50)
-        canvas_height = st.slider("Alto", 300, 800, 500, 50)
+    num_objs = len(json_data["objects"])
+    types = [obj["type"] for obj in json_data["objects"]]
+    
+    # Lógica de predicción basada en la estructura del dibujo
+    if "circle" in types and num_objs == 1:
+        return "Eso es claramente un sol o una pizza sin ingredientes.", "🍕"
+    elif num_objs > 15:
+        return "Veo un caos absoluto... ¿Es arte abstracto o un plato de espaguetis?", "🍝"
+    elif "rect" in types and "line" in types:
+        return "Parece una casa o un robot muy cuadrado.", "🤖"
+    elif "freedraw" in types and num_objs < 5:
+        return "Unas firmas elegantes o quizás el rastro de un caracol.", "🐌"
+    else:
+        opciones = [
+            "¡Es un autorretrato tuyo en el futuro!",
+            "Claramente es un mapa de una isla del tesoro.",
+            "Una representación cuántica de la felicidad.",
+            "¡Un gato! Bueno... un gato dibujado con el pie."
+        ]
+        return random.choice(opciones), "✨"
 
-    st.subheader("🖌️ Pincel")
-    drawing_mode = st.selectbox(
-        "Herramienta:",
-        ("freedraw", "line", "rect", "circle", "transform", "polygon", "point")
-    )
-    stroke_width = st.slider("Grosor del trazo", 1, 50, 5)
-
-    # --- Sección de Colores Mejorada ---
+# --- SIDEBAR MEJORADO ---
+with st.sidebar:
+    st.image("https://cdn-icons-png.flaticon.com/512/1004/1004733.png", width=80)
+    st.title("Studio Vision")
     st.markdown("---")
     
-    # Paletas de colores predefinidas
-    palette = ["#FF4B4B", "#FFA500", "#FFFF00", "#00FF00", "#00FFFF", "#0000FF", "#8B00FF", "#FFFFFF", "#000000"]
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.write("*Color Pincel*")
-        stroke_color = st.color_picker("Stroke", "#FFFFFF", label_visibility="collapsed")
-        # Botones rápidos para color de trazo
-        st.write("Presets:")
-        cp_cols = st.columns(3)
-        for i, color in enumerate(palette[:6]):
-            if cp_cols[i % 3].button(" ", key=f"p_{i}", help=color):
-                stroke_color = color
+    with st.expander("🎨 Personalizar Pincel", expanded=True):
+        mode = st.selectbox("Herramienta", ("freedraw", "line", "rect", "circle", "transform"))
+        stroke_width = st.select_slider("Grosor", options=range(1, 51), value=5)
+        stroke_color = st.color_picker("Color del Pincel", "#00FFCC")
+        bg_color = st.color_picker("Color del Fondo", "#0E1117")
 
-    with col2:
-        st.write("*Color Fondo*")
-        bg_color = st.color_picker("BG", "#1E1E1E", label_visibility="collapsed")
-        # Botones rápidos para color de fondo
-        st.write("Presets:")
-        bg_p_cols = st.columns(3)
-        bg_presets = ["#FFFFFF", "#1E1E1E", "#2D2D2D"]
-        for i, color in enumerate(bg_presets):
-            if bg_p_cols[i % 3].button(" ", key=f"bg_{i}", help=color):
-                bg_color = color
+    if st.button("🗑️ Limpiar Estudio"):
+        st.rerun()
 
-# --- Área Principal ---
-c1, c2, c3 = st.columns([1, 4, 1])
+# --- CUERPO PRINCIPAL ---
+col_main, col_ai = st.columns([3, 1])
 
-with c2:
-    # Contenedor para el canvas
+with col_main:
+    st.subheader("✍️ Área de Creación")
     canvas_result = st_canvas(
-        fill_color="rgba(255, 165, 0, 0.3)",
+        fill_color="rgba(255, 255, 255, 0.2)",
         stroke_width=stroke_width,
         stroke_color=stroke_color,
         background_color=bg_color,
-        height=canvas_height,
-        width=canvas_width,
-        drawing_mode=drawing_mode,
-        key=f"canvas_{canvas_width}{canvas_height}{stroke_color}_{bg_color}", 
+        height=550,
+        width=850,
+        drawing_mode=mode,
+        key="main_canvas",
         update_streamlit=True,
     )
 
-    if canvas_result.image_data is not None:
-        st.caption("Usa el botón secundario para guardar tu obra maestra.")
+with col_ai:
+    st.subheader("🧠 IA Predictora")
+    st.write("Dibuja algo y deja que la IA lo analice.")
+    
+    if st.button("🔮 ¿QUÉ ESTOY DIBUJANDO?"):
+        if canvas_result.json_data:
+            with st.spinner("Analizando pixeles y neuronas..."):
+                time.sleep(1.5) # Simula procesamiento
+                prediction, icon = predict_drawing(canvas_result.json_data)
+                
+                st.markdown(f"""
+                <div class="prediction-box">
+                    <h1 style='font-size: 40px; margin: 0;'>{icon}</h1>
+                    <p style='font-size: 18px;'>{prediction}</p>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.warning("¡Primero dibuja algo, artista!")
+
+    st.markdown("---")
+    st.write("*Estadísticas del dibujo:*")
+    if canvas_result.json_data:
+        obj_count = len(canvas_result.json_data["objects"])
+        st.write(f"• Elementos detectados: {obj_count}")
+        if obj_count > 0:
+            st.success("Analizador activo ✅")
+
+# Pie de página
+st.markdown("<br><center><p style='color: #555;'>Power by Streamlit & Your Creativity</p></center>", unsafe_allow_html=True)
